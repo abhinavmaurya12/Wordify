@@ -1,0 +1,23 @@
+/* WordX – themes.css : design tokens for light and dark mode */
+:root, [data-theme="light"] {
+  --accent: #2b6cb0; --accent-hover: #245a94; --accent-soft: #e4effa; --accent-text: #ffffff;
+  --bg: #f3f4f6; --surface: #ffffff; --surface-2: #f7f8fa; --surface-3: #eceef2;
+  --border: #d9dde3; --border-strong: #c3c9d2;
+  --text: #1f2933; --text-muted: #6b7684; --danger: #c62828; --ok: #2e7d32; --warn: #b26a00;
+  --ribbon-bg: #f8f9fb; --canvas-bg: #e6e8ec; --ruler-bg: #f1f2f5; --ruler-ink: #7a8594;
+  --shadow: 0 6px 24px rgba(20, 30, 50, .16); --shadow-sm: 0 1px 3px rgba(20, 30, 50, .14);
+  --hover: rgba(43, 108, 176, .09); --press: rgba(43, 108, 176, .18);
+  --title-bg: #2b6cb0; --title-text: #ffffff;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --accent: #5aa0e8; --accent-hover: #7bb4ee; --accent-soft: #1f3550; --accent-text: #08121f;
+  --bg: #15181d; --surface: #1d2127; --surface-2: #232830; --surface-3: #2b313a;
+  --border: #323944; --border-strong: #434c59;
+  --text: #e5e9ef; --text-muted: #98a3b3; --danger: #ef6b6b; --ok: #6fcf7a; --warn: #f0b04a;
+  --ribbon-bg: #1f242b; --canvas-bg: #101317; --ruler-bg: #20252c; --ruler-ink: #8d98a8;
+  --shadow: 0 8px 28px rgba(0, 0, 0, .55); --shadow-sm: 0 1px 3px rgba(0, 0, 0, .5);
+  --hover: rgba(90, 160, 232, .13); --press: rgba(90, 160, 232, .25);
+  --title-bg: #1a2a40; --title-text: #e5e9ef;
+  color-scheme: dark;
+}

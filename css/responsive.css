@@ -1,0 +1,31 @@
+/* WordX – responsive.css : tablet & phone adaptations */
+@media (max-width: 1100px) {
+  #side-pane { position: absolute; right: 0; top: 0; bottom: 0; z-index: 30; width: min(360px, 92vw); box-shadow: var(--shadow); }
+  #nav-pane { position: absolute; left: 0; top: 0; bottom: 0; z-index: 30; box-shadow: var(--shadow); }
+  .home-nav { width: 200px; }
+}
+@media (max-width: 800px) {
+  .hide-sm { display: none !important; } .only-mobile { display: inline-flex; }
+  #home { flex-direction: column; } .home-nav { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; z-index: 50; transform: translateX(-100%); transition: transform .22s; box-shadow: var(--shadow); } body.home-menu-open .home-nav { transform: none; }
+  .home-top { padding: 10px 12px; } #home-content { padding: 0 14px 40px; } .doc-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; } .tpl-card { width: 124px; } .tpl-thumb { height: 164px; }
+  #titlebar { padding: 3px 4px; gap: 0; } #titlebar .icon-btn { width: 38px; height: 38px; } #btn-comments, #btn-theme, #btn-redo { display: none; } .file-btn { padding: 6px 11px; margin: 0 2px; }
+  #save-status { font-size: 0; padding: 0 6px; } #save-status::before { width: 10px; height: 10px; }
+  .doc-tab { min-width: 60px; max-width: 130px; }
+  #ribbon-tabs { padding: 0 2px; } .rtab { padding: 10px 11px 9px; }
+  #ribbon { min-height: 0; padding: 6px 4px; } .rbtn.sm { width: 36px; height: 36px; } .rbtn.lg { width: 66px; min-height: 70px; } .rsel { height: 36px; }
+  .rgroup { padding: 0 6px; }
+  #statusbar { padding: 0 4px; min-height: 28px; } #zoom-slider { display: none; }
+  #side-pane, #nav-pane { width: 100vw; max-width: 100vw; }
+  #mobile-bar { display: flex; gap: 2px; background: var(--surface); border-top: 1px solid var(--border); padding: 4px 6px calc(4px + env(safe-area-inset-bottom)); overflow-x: auto; flex: none; scrollbar-width: none; }
+  #mobile-bar .icon-btn { width: 42px; height: 42px; flex: none; } #mobile-bar .icon-btn.on { background: var(--press); color: var(--accent); }
+  #mobile-bar .mb-sep { width: 1px; background: var(--border); margin: 6px 4px; flex: none; }
+  #ruler { display: none !important; } #zoom-holder { margin: 8px auto 70px; }
+  .modal { width: 100% !important; max-height: 94vh; } .form.grid2 { grid-template-columns: 1fr; }
+  body[data-view=read] #editor, body[data-view=web] #editor { padding: 20px 18px; }
+  .menu { max-width: 94vw; }
+  #toasts { bottom: 110px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .menu-item { padding: 10px 12px; } .rbtn.sm { min-width: 36px; } .wx-handles i { width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
