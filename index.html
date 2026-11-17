@@ -570,7 +570,7 @@ button, .rtab, .menu-item, .nav-item, .doc-card, .tpl-card, .sb-item { touch-act
   <!-- ============ HOME / DASHBOARD ============ -->
   <section id="home" aria-label="Home">
     <aside class="home-nav">
-      <div class="brand"><img src="icon.svg" alt="" width="30" height="30"><span>Word<b>ify</b></span><small class="brand-ver">vr.1.5.0</small></div>
+      <div class="brand"><img src="icon.svg" alt="" width="30" height="30"><span>Word<b>ify</b></span><small class="brand-ver">vr.1.6.0</small></div>
       <button class="nav-new" id="home-new"></button>
       <nav id="home-nav-items"></nav>
       <div class="home-nav-foot">
@@ -1636,7 +1636,7 @@ window.WX_ICONS={"bold":"<path d=\"M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 01
     ed.el.spellcheck = WX.state.nativeSpell !== false;
     ed.updateEditable();
     WX.page.apply(true);
-    if (!doc._h) doc._h = { undo: [], redo: [], cur: { html: ed.getHTML(), sel: null } };
+    if (!doc._h) doc._h = { undo: [], redo: [], cur: (() => { const raw = ed.getHTML(); return { html: packImgs(raw), n: raw.length, sel: null }; })() };
     WX.bus.emit('docloaded', doc);
   };
   ed.commit = function () { if (!ed.doc) return; ed.doc.content = ed.getHTML(); };
@@ -1649,14 +1649,18 @@ window.WX_ICONS={"bold":"<path d=\"M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 01
   ed.isEditable = () => ed.el.isContentEditable;
 
   /* ---------- change pipeline & history ---------- */
-  const snap = () => ({ html: ed.getHTML(), sel: ed.saveSel() });
+  /* history stores each distinct embedded image once (by id) instead of a full copy per undo step */
+  const imgIds = new Map(), imgById = new Map(); let imgN = 0;
+  function packImgs(h) { return h.replace(/src="(data:image\/[^"]+)"/g, (m, u) => { let id = imgIds.get(u); if (!id) { id = 'wximg:' + (++imgN); imgIds.set(u, id); imgById.set(id, u); } return 'src="' + id + '"'; }); }
+  function unpackImgs(h) { return h.replace(/src="(wximg:\d+)"/g, (m, id) => 'src="' + (imgById.get(id) || '') + '"'); }
+  const snap = () => { const raw = ed.getHTML(); return { html: packImgs(raw), n: raw.length, sel: ed.saveSel() }; };
   ed.pushHistory = function () {
     const d = ed.doc; if (!d) return; const h = d._h; const s = snap();
     if (s.html === h.cur.html) { h.cur.sel = s.sel; return; }
     h.undo.push(h.cur); h.cur = s; h.redo.length = 0;
-    let total = 0; for (let i = h.undo.length - 1; i >= 0; i--) { total += h.undo[i].html.length; if (total > 40e6 || h.undo.length - i > 100) { h.undo.splice(0, i + 1); break; } }
+    let total = 0; for (let i = h.undo.length - 1; i >= 0; i--) { total += h.undo[i].html.length; if (total > 16e6 || h.undo.length - i > 80) { h.undo.splice(0, i + 1); break; } }
   };
-  const pushDeb = debounce(() => ed.pushHistory(), 450);
+  const pushDeb = (() => { let t = null; const f = () => { clearTimeout(t); const L = ed.doc && ed.doc._h ? (ed.doc._h.cur.n || ed.doc._h.cur.html.length) : 0; t = setTimeout(() => { t = null; ed.pushHistory(); }, L > 3e5 ? 1500 : L > 1e5 ? 800 : 450); }; f.cancel = () => { clearTimeout(t); t = null; }; f.flush = () => { if (t != null) { clearTimeout(t); t = null; ed.pushHistory(); } }; return f; })();
   ed.changed = function (o) {
     const d = ed.doc; if (!d) return; o = o || {};
     d.dirty = true; d.lastEdit = Date.now();
@@ -1666,11 +1670,11 @@ window.WX_ICONS={"bold":"<path d=\"M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 01
   /** Run a mutation that must be a single undo step. */
   ed.run = function (fn) { ed.restore(); pushDeb.flush(); const r = fn(); ed.changed({ immediate: true }); return r; };
   function applySnap(s) {
-    ed.el.innerHTML = s.html; ed.normalize(); ed.loadSel(s.sel); ed.doc.dirty = true; WX.page.paginate(); WX.bus.emit('dirty', ed.doc); WX.bus.emit('selection'); WX.bus.emit('restored');
+    ed.el.innerHTML = unpackImgs(s.html); ed.normalize(); ed.loadSel(s.sel); ed.doc.dirty = true; WX.page.paginate(); WX.bus.emit('dirty', ed.doc); WX.bus.emit('selection'); WX.bus.emit('restored');
   }
   ed.undo = function () { pushDeb.flush(); const h = ed.doc._h; if (!h.undo.length) return; h.redo.push(h.cur); h.cur = h.undo.pop(); applySnap(h.cur); };
   ed.redo = function () { pushDeb.flush(); const h = ed.doc._h; if (!h.redo.length) return; h.undo.push(h.cur); h.cur = h.redo.pop(); applySnap(h.cur); };
-  ed.canUndo = () => !!(ed.doc && ed.doc._h && (ed.doc._h.undo.length || ed.doc._h.cur.html !== ed.getHTML()));
+  ed.canUndo = () => !!(ed.doc && ed.doc._h && (ed.doc._h.undo.length || ed.doc.dirty));
   ed.canRedo = () => !!(ed.doc && ed.doc._h && ed.doc._h.redo.length);
 
   /* ---------- input pipeline ---------- */
@@ -1850,7 +1854,7 @@ window.WX_ICONS={"bold":"<path d=\"M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 01
     $('#paper').style.setProperty('--page-bg', e.doc.settings.page.bg || '#fff');
     P.paginate(true); P.renderRuler(); P.fit();
   };
-  P.schedule = function () { clearTimeout(timer); timer = setTimeout(() => { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(() => P.paginate()); }, 90); };
+  P.schedule = function () { clearTimeout(timer); const n = ed().el ? ed().el.childElementCount : 0; timer = setTimeout(() => { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(() => P.paginate()); }, n > 600 ? 450 : n > 250 ? 220 : 90); };
 
   function units() {
     const u = [];
@@ -1869,25 +1873,28 @@ window.WX_ICONS={"bold":"<path d=\"M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 01
     if (WX.state.view === 'print') {
       const u = units(); const { PH, H, mt, mb, ch } = m; let minTop = 0;
       const pageOf = (y) => Math.max(0, Math.floor(y / PH));
-      const push = (n, target) => {
-        const m0 = parseFloat(getComputedStyle(n).marginTop) || 0; n.setAttribute('data-wx-push', '1');
-        let v = m0 + target - n.offsetTop; n.style.setProperty('--wx-push', v + 'px');
-        for (let k = 0; k < 2; k++) { const err = target - n.offsetTop; if (Math.abs(err) < 0.5) break; v += err; n.style.setProperty('--wx-push', v + 'px'); } // margin-collapse correction
-      };
+      /* read phase: one layout, then simulate pushes with a running offset (no layout thrashing) */
+      const nat = u.map((n) => n.offsetTop), hs = u.map((n) => n.offsetHeight);
+      let shift = 0; const pushes = new Map(); const tops = [];
+      const doPush = (i, target, curTop) => { const m0 = parseFloat(getComputedStyle(u[i]).marginTop) || 0; pushes.set(i, { v: m0 + target - curTop, target }); shift += target - curTop; };
       let end = 0;
       for (let i = 0; i < u.length; i++) {
-        const n = u[i]; let top = n.offsetTop; const h = n.offsetHeight;
-        if (minTop && top < minTop) { push(n, minTop); top = n.offsetTop; } minTop = 0;
+        const n = u[i], h = hs[i]; let top = nat[i] + shift;
+        if (minTop && top < minTop) { doPush(i, minTop, top); top = nat[i] + shift; } minTop = 0;
         const p = pageOf(top); const limit = p * PH + H - mb; const pageTop = p * PH + mt;
         const brk = n.classList.contains('wx-pagebreak') || (n.classList.contains('wx-sectionbreak') && n.dataset.kind !== 'continuous');
         if (!brk && top + h > limit + 0.5 && h <= ch + 0.5 && top > pageTop + 1) {
           const target = (p + 1) * PH + mt; const prev = u[i - 1];
-          if (prev && isHeading(prev) && !prev.hasAttribute('data-wx-push') && prev.offsetTop > pageTop + 1) push(prev, target); // keep heading with next block
-          else push(n, target);
-        } else if (!brk && h > 0 && top >= limit - 0.5) push(n, (p + 1) * PH + mt); // starts inside the bottom margin
-        if (brk) minTop = (pageOf(n.offsetTop) + 1) * PH + mt;
-        end = Math.max(end, n.offsetTop + n.offsetHeight);
+          if (prev && isHeading(prev) && !pushes.has(i - 1) && tops[i - 1] > pageTop + 1) doPush(i - 1, target, tops[i - 1]); // keep heading with next block
+          else doPush(i, target, top);
+        } else if (!brk && h > 0 && top >= limit - 0.5) doPush(i, (p + 1) * PH + mt, top); // starts inside the bottom margin
+        const nt = nat[i] + shift; tops[i] = nt;
+        if (brk) minTop = (pageOf(nt) + 1) * PH + mt;
+        end = Math.max(end, nt + h);
       }
+      /* write phase: apply all pushes at once, then correct margin-collapse error only on pushed nodes */
+      pushes.forEach((o, i) => { u[i].setAttribute('data-wx-push', '1'); u[i].style.setProperty('--wx-push', o.v + 'px'); });
+      pushes.forEach((o, i) => { const n = u[i]; let v = o.v; for (let k = 0; k < 2; k++) { const err = o.target - n.offsetTop; if (Math.abs(err) < 0.5) break; v += err; n.style.setProperty('--wx-push', v + 'px'); } });
       if (minTop && u.length) { /* trailing page break: content ends on next page */ end = Math.max(end, minTop + 1); }
       pages = Math.max(1, pageOf(end - 1) + 1);
       el_.style.minHeight = pages * PH - GAP + 'px';
@@ -3902,11 +3909,12 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{backgro
   };
   let autoT = null, recT = null;
   function onDirty(d) {
-    setStatus('Unsaved changes', 'dirty'); renderTabs(); clearTimeout(autoT); autoT = setTimeout(() => { if (D.cur && D.cur.dirty) D.save(false); }, 2000);
-    clearTimeout(recT); recT = setTimeout(writeRecovery, 700);
+    setStatus('Unsaved changes', 'dirty'); renderTabs(); const big = d && d._h && (d._h.cur.n || d._h.cur.html.length) > 4e5; clearTimeout(autoT); autoT = setTimeout(() => { if (D.cur && D.cur.dirty) D.save(false); }, big ? 6000 : 2000);
+    clearTimeout(recT); recT = setTimeout(writeRecovery, big ? 8000 : 2500);
   }
   function writeRecovery() {
     const d = D.cur; if (!d || !d.dirty) return;
+    if (d._h && (d._h.cur.n || d._h.cur.html.length) > 4e5) return; /* large doc: IndexedDB autosave covers it; avoid sync localStorage + full serialize */
     try { E().commit(); localStorage.setItem(REC_KEY, JSON.stringify({ id: d.id, title: d.title, content: d.content, settings: d.settings, meta: d.meta, created: d.created, ts: Date.now() })); } catch (e) { /* quota – autosave to IndexedDB still runs */ }
   }
   D.checkRecovery = async function () {
@@ -4107,12 +4115,11 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{backgro
       </ul>
       <small>Demo project. Documents and settings stay only in this browser.</small>
       <div style="margin-top:10px"><a class="btn primary" href="https://github.com/abhinavmaurya12?tab=repositories" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></div>
-      <h4>🆕 What’s new in vr.1.5.0</h4>
+      <h4>🆕 What’s new in vr.1.6.0</h4>
       <ul>
-        <li>🍔 Dashboard: the menu icon is now hidden on desktop and shown only on small screens</li>
-        <li>📂 Menus: submenus such as Download stay open while you hover their items</li>
-        <li>🏷️ Version label shown next to the Wordify logo</li>
-        <li>👤 New About developer page</li>
+        <li>⚡ Faster editing: page layout is calculated in one pass, so long documents no longer freeze while typing</li>
+        <li>↩️ Lighter undo history: embedded images are stored once instead of once per undo step</li>
+        <li>💾 Smoother autosave: large documents save less often and skip the extra recovery copy</li>
       </ul>
       <h4>Connect</h4>
       <div class="about-links">${L('https://github.com/abhinavmaurya12', '🐙 GitHub')}${L('https://www.linkedin.com/in/abhinavmaurya1/', '💼 LinkedIn')}${L('https://www.instagram.com/_abhinav_830_', '📸 Instagram')}</div>
